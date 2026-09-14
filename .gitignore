@@ -1,0 +1,9 @@
+# Local SSH material
+key_pair/
+
+# Local test configuration
+testcases/.env
+
+# CloudFormation package output
+packaged.yaml
+cloudformation/parameters/dev.json

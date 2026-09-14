@@ -1,0 +1,13 @@
+[
+  { "ParameterKey": "ProjectName", "ParameterValue": "cloudformation-aws-lab" },
+  { "ParameterKey": "Environment", "ParameterValue": "dev" },
+  { "ParameterKey": "VpcCidr", "ParameterValue": "10.0.0.0/16" },
+  { "ParameterKey": "PublicSubnetCidr", "ParameterValue": "10.0.1.0/24" },
+  { "ParameterKey": "PrivateSubnetCidr", "ParameterValue": "10.0.2.0/24" },
+  { "ParameterKey": "AvailabilityZone", "ParameterValue": "ap-southeast-1a" },
+  { "ParameterKey": "AllowedSshCidr", "ParameterValue": "REPLACE_WITH_YOUR_PUBLIC_IP/32" },
+  { "ParameterKey": "AmiId", "ParameterValue": "REPLACE_WITH_VALID_AMI_ID" },
+  { "ParameterKey": "InstanceType", "ParameterValue": "t3.micro" },
+  { "ParameterKey": "KeyName", "ParameterValue": "lab_cfn_key" },
+  { "ParameterKey": "PublicKeyMaterial", "ParameterValue": "REPLACE_WITH_LOCAL_PUBLIC_KEY" }
+]

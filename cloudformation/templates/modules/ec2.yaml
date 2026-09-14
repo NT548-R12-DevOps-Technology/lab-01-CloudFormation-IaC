@@ -1,0 +1,121 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Nested stack for Lab 01 public and private EC2 instances.
+
+Parameters:
+  ProjectName:
+    Type: String
+  Environment:
+    Type: String
+  PublicSubnetId:
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnetId:
+    Type: AWS::EC2::Subnet::Id
+  PublicSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+  PrivateSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+  AmiId:
+    Type: AWS::EC2::Image::Id
+  InstanceType:
+    Type: String
+  KeyName:
+    Type: String
+  PublicKeyMaterial:
+    Type: String
+    NoEcho: true
+
+Resources:
+  LabKeyPair:
+    Type: AWS::EC2::KeyPair
+    Properties:
+      KeyName: !Ref KeyName
+      PublicKeyMaterial: !Ref PublicKeyMaterial
+      Tags:
+        - Key: Name
+          Value: !Ref KeyName
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  PublicInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AmiId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref LabKeyPair
+      EbsOptimized: true
+      Monitoring: true
+      MetadataOptions:
+        HttpEndpoint: enabled
+        HttpTokens: required
+        HttpPutResponseHopLimit: 1
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            DeleteOnTermination: true
+            Encrypted: true
+            VolumeType: gp3
+      NetworkInterfaces:
+        - DeviceIndex: '0'
+          SubnetId: !Ref PublicSubnetId
+          GroupSet:
+            - !Ref PublicSecurityGroupId
+          AssociatePublicIpAddress: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-public-ec2-1'
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  PrivateInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AmiId
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref LabKeyPair
+      EbsOptimized: true
+      Monitoring: true
+      MetadataOptions:
+        HttpEndpoint: enabled
+        HttpTokens: required
+        HttpPutResponseHopLimit: 1
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            DeleteOnTermination: true
+            Encrypted: true
+            VolumeType: gp3
+      NetworkInterfaces:
+        - DeviceIndex: '0'
+          SubnetId: !Ref PrivateSubnetId
+          GroupSet:
+            - !Ref PrivateSecurityGroupId
+          AssociatePublicIpAddress: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-private-ec2-1'
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: CloudFormation
+
+Outputs:
+  PublicInstanceId:
+    Value: !Ref PublicInstance
+  PublicInstancePublicIp:
+    Value: !GetAtt PublicInstance.PublicIp
+  PublicInstancePrivateIp:
+    Value: !GetAtt PublicInstance.PrivateIp
+  PrivateInstanceId:
+    Value: !Ref PrivateInstance
+  PrivateInstancePrivateIp:
+    Value: !GetAtt PrivateInstance.PrivateIp

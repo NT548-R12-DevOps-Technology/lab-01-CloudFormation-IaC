@@ -1,0 +1,77 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Nested stack for Lab 01 Security Groups.
+
+Parameters:
+  ProjectName:
+    Type: String
+  Environment:
+    Type: String
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  AllowedSshCidr:
+    Type: String
+
+Resources:
+  PublicSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Bastion SSH access from the trusted administrator CIDR.
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound IPv4 traffic.
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-public-sg'
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  PublicSshIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref PublicSecurityGroup
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      CidrIp: !Ref AllowedSshCidr
+      Description: SSH from the trusted administrator IPv4 CIDR.
+
+  PrivateSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Private EC2 SSH access from the bastion Security Group only.
+      VpcId: !Ref VpcId
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound IPv4 traffic through the NAT Gateway.
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}-${Environment}-private-sg'
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  PrivateSshIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref PrivateSecurityGroup
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      SourceSecurityGroupId: !Ref PublicSecurityGroup
+      Description: SSH from instances using the public Security Group.
+
+Outputs:
+  PublicSecurityGroupId:
+    Value: !Ref PublicSecurityGroup
+  PrivateSecurityGroupId:
+    Value: !Ref PrivateSecurityGroup

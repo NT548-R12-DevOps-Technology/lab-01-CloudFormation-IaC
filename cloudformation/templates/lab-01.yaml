@@ -1,0 +1,126 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Root stack for Lab 01 AWS infrastructure using nested CloudFormation stacks.
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: cloudformation-aws-lab
+  Environment:
+    Type: String
+    Default: dev
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+  PublicSubnetCidr:
+    Type: String
+    Default: 10.0.1.0/24
+  PrivateSubnetCidr:
+    Type: String
+    Default: 10.0.2.0/24
+  AvailabilityZone:
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: ap-southeast-1a
+  AllowedSshCidr:
+    Type: String
+    Description: Trusted administrator public IPv4 CIDR, for example 203.0.113.10/32.
+    AllowedPattern: ^([0-9]{1,3}\.){3}[0-9]{1,3}/(3[0-2]|[12]?[0-9])$
+  AmiId:
+    Type: AWS::EC2::Image::Id
+    Description: Linux AMI in the selected AWS Region.
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues: [t3.micro, t3.small]
+  KeyName:
+    Type: String
+    Default: lab_cfn_key
+  PublicKeyMaterial:
+    Type: String
+    NoEcho: true
+    Description: Contents of key_pair/lab_key.pub.
+
+Rules:
+  TrustedSshCidrMustNotBeOpen:
+    Assertions:
+      - Assert:
+          Fn::Not:
+            - Fn::Equals:
+                - Ref: AllowedSshCidr
+                - 0.0.0.0/0
+        AssertDescription: AllowedSshCidr must not be 0.0.0.0/0.
+
+Resources:
+  VpcStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./modules/vpc.yaml
+      Parameters:
+        ProjectName: !Ref ProjectName
+        Environment: !Ref Environment
+        VpcCidr: !Ref VpcCidr
+
+  NetworkingStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./modules/networking.yaml
+      Parameters:
+        ProjectName: !Ref ProjectName
+        Environment: !Ref Environment
+        VpcId: !GetAtt VpcStack.Outputs.VpcId
+        PublicSubnetCidr: !Ref PublicSubnetCidr
+        PrivateSubnetCidr: !Ref PrivateSubnetCidr
+        AvailabilityZone: !Ref AvailabilityZone
+
+  SecurityStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./modules/security.yaml
+      Parameters:
+        ProjectName: !Ref ProjectName
+        Environment: !Ref Environment
+        VpcId: !GetAtt VpcStack.Outputs.VpcId
+        AllowedSshCidr: !Ref AllowedSshCidr
+
+  Ec2Stack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./modules/ec2.yaml
+      Parameters:
+        ProjectName: !Ref ProjectName
+        Environment: !Ref Environment
+        PublicSubnetId: !GetAtt NetworkingStack.Outputs.PublicSubnetId
+        PrivateSubnetId: !GetAtt NetworkingStack.Outputs.PrivateSubnetId
+        PublicSecurityGroupId: !GetAtt SecurityStack.Outputs.PublicSecurityGroupId
+        PrivateSecurityGroupId: !GetAtt SecurityStack.Outputs.PrivateSecurityGroupId
+        AmiId: !Ref AmiId
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref KeyName
+        PublicKeyMaterial: !Ref PublicKeyMaterial
+
+Outputs:
+  VpcId:
+    Value: !GetAtt VpcStack.Outputs.VpcId
+  PublicSubnetId:
+    Value: !GetAtt NetworkingStack.Outputs.PublicSubnetId
+  PrivateSubnetId:
+    Value: !GetAtt NetworkingStack.Outputs.PrivateSubnetId
+  InternetGatewayId:
+    Value: !GetAtt NetworkingStack.Outputs.InternetGatewayId
+  NatGatewayId:
+    Value: !GetAtt NetworkingStack.Outputs.NatGatewayId
+  NatGatewayPublicIp:
+    Value: !GetAtt NetworkingStack.Outputs.NatGatewayPublicIp
+  PublicSecurityGroupId:
+    Value: !GetAtt SecurityStack.Outputs.PublicSecurityGroupId
+  PrivateSecurityGroupId:
+    Value: !GetAtt SecurityStack.Outputs.PrivateSecurityGroupId
+  PublicInstanceId:
+    Value: !GetAtt Ec2Stack.Outputs.PublicInstanceId
+  PublicInstancePublicIp:
+    Value: !GetAtt Ec2Stack.Outputs.PublicInstancePublicIp
+  PublicInstancePrivateIp:
+    Value: !GetAtt Ec2Stack.Outputs.PublicInstancePrivateIp
+  PrivateInstanceId:
+    Value: !GetAtt Ec2Stack.Outputs.PrivateInstanceId
+  PrivateInstancePrivateIp:
+    Value: !GetAtt Ec2Stack.Outputs.PrivateInstancePrivateIp
